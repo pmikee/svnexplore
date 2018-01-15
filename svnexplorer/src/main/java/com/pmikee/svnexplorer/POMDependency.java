@@ -1,6 +1,6 @@
 package com.pmikee.svnexplorer;
 
-public class POMDependency {
+public class POMDependency implements Comparable<POMDependency>{
 
 	private String artifact;
 	private String groupId;
@@ -44,6 +44,15 @@ public class POMDependency {
 
 	public void setOriginalVersion(String originalVersion) {
 		this.originalVersion = originalVersion;
+	}
+
+	public String toCsv() {
+		return groupId + ";" + artifact + "; " + version + " " + System.getProperty("line.separator");
+	}
+
+	@Override
+	public int compareTo(POMDependency other) {
+		return artifact.compareTo(other.getArtifact());
 	}
 
 }

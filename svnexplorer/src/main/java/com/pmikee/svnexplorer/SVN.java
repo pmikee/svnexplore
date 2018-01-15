@@ -1,5 +1,7 @@
 package com.pmikee.svnexplorer;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -28,6 +30,7 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -41,7 +44,12 @@ import javax.swing.JTextField;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.TransferHandler;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import javax.swing.text.DefaultCaret;
@@ -154,9 +162,9 @@ public class SVN {
 		frame.getContentPane().add(panel, gbc_panel);
 		GridBagLayout gbl_panel = new GridBagLayout();
 		gbl_panel.columnWidths = new int[] { 150, 200, 0, 200, 0, 30, 0 };
-		gbl_panel.rowHeights = new int[] { 0, 0, 329, 260, 0 };
+		gbl_panel.rowHeights = new int[] { 0, 0, 329, 0, 260, 0 };
 		gbl_panel.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
-		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panel.setLayout(gbl_panel);
 
 		filePathField = new JTextField();
@@ -296,16 +304,52 @@ public class SVN {
 		gbc_tableScollPane.gridy = 2;
 		panel.add(tableScollPane, gbc_tableScollPane);
 
-		dependencyTable = new JTable(new POMTableModel());
+		dependencyTable = new JTable(new POMTableModel()) {
+			private Border outside = new MatteBorder(1, 0, 1, 0, Color.RED);
+			private Border inside = new EmptyBorder(0, 1, 0, 1);
+			private Border highlight = new CompoundBorder(outside, inside);
+
+			@Override
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+				Component c = super.prepareRenderer(renderer, row, column);
+				JComponent jc = (JComponent) c;
+				if (isRowSelected(row)) {
+					jc.setBorder(highlight);
+				}
+
+				if (!isRowSelected(row)) {
+					c.setBackground(getBackground());
+					POMDependency d = ((POMTableModel) getModel()).getRowValue(row);
+					if (!StringUtils.isBlank(d.getOriginalVersion())) {
+						c.setBackground(Color.RED);
+					}
+				}
+				return c;
+
+			}
+		};
 
 		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(dependencyTable.getModel());
 		dependencyTable.setRowSorter(sorter);
+		dependencyTable.changeSelection(0, 0, false, false);
 
 		List<RowSorter.SortKey> sortKeys = new ArrayList<>();
 		sortKeys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
 		sorter.setSortKeys(sortKeys);
 
 		tableScollPane.setViewportView(dependencyTable);
+		
+		btnExport = new JButton("Export");
+		btnExport.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				logArea.setText(logArea.getText() + System.getProperty("line.separator") + "verziók csv elkészült: " + (((POMTableModel)dependencyTable.getModel()).createCSV()).getAbsolutePath());
+			}
+		});
+		GridBagConstraints gbc_btnExport = new GridBagConstraints();
+		gbc_btnExport.insets = new Insets(0, 0, 5, 5);
+		gbc_btnExport.gridx = 0;
+		gbc_btnExport.gridy = 3;
+		panel.add(btnExport, gbc_btnExport);
 
 		logScrollPane = new JScrollPane();
 		GridBagConstraints gbc_logScrollPane = new GridBagConstraints();
@@ -313,7 +357,7 @@ public class SVN {
 		gbc_logScrollPane.gridwidth = 4;
 		gbc_logScrollPane.fill = GridBagConstraints.BOTH;
 		gbc_logScrollPane.gridx = 0;
-		gbc_logScrollPane.gridy = 3;
+		gbc_logScrollPane.gridy = 4;
 		panel.add(logScrollPane, gbc_logScrollPane);
 
 		logArea = new JTextArea();
@@ -360,6 +404,7 @@ public class SVN {
 			return true;
 		}
 	};
+	private JButton btnExport;
 
 	private void process() {
 		POMTableModel tableModel = (POMTableModel) dependencyTable.getModel();
@@ -369,7 +414,7 @@ public class SVN {
 			try {
 				Model model = reader.read(new FileReader(new File(filePathField.getText())));
 				for (Dependency dep : model.getDependencies()) {
-					if (dep.getGroupId().contains("com.fusionr.erps")) {
+					if (dep.getGroupId().equals("com.fusionr.erps") || dep.getGroupId().equals("com.fusionr.erps.ws")) {
 						POMDependency d = new POMDependency(dep.getArtifactId(), dep.getGroupId(), dep.getVersion());
 						if (d != null) {
 							tableModel.setRowValue(d);
@@ -385,7 +430,7 @@ public class SVN {
 		} else {
 			InvocationRequest request = new DefaultInvocationRequest();
 			request.setPomFile(new File(filePathField.getText()));
-			request.setGoals(Arrays.asList("clean, compile, dependency:list".split(", ")));
+			request.setGoals(Arrays.asList("dependency:list".split(", ")));
 
 			Invoker invoker = new DefaultInvoker();
 			invoker.setMavenHome(new File(prefs.get("MVN_HOME", "")));
