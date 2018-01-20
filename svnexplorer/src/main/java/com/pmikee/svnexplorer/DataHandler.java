@@ -19,6 +19,7 @@ public class DataHandler extends DefaultHandler {
 	private String version;
 	private String releaseVersion;
 	private StringBuilder csv = new StringBuilder();
+	private String artifact;
 
 	public DataHandler() {
 		super();
@@ -84,7 +85,11 @@ public class DataHandler extends DefaultHandler {
 				csv.append(d);
 				csv.append(';');
 			}
+			sb.append(artifact);
+			sb.append(';');
 			sb.append(version);
+			csv.append(artifact);
+			csv.append(';');
 			csv.append(version);
 			csv.append(System.getProperty("line.separator"));
 			textArea.setText(textArea.getText() + System.getProperty("line.separator") + (sb.toString().trim()));
@@ -117,5 +122,10 @@ public class DataHandler extends DefaultHandler {
 	
 	public StringBuilder getCSV() {
 		return csv;
+	}
+
+	public void setArtifact(String artifact) {
+		this.artifact = artifact;
+		
 	}
 }

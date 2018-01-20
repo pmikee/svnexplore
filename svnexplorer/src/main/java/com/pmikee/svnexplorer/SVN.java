@@ -180,6 +180,7 @@ public class SVN {
 
 		fileButton = new JButton("...");
 		GridBagConstraints gbc_fileButton = new GridBagConstraints();
+		gbc_fileButton.anchor = GridBagConstraints.WEST;
 		gbc_fileButton.insets = new Insets(0, 0, 5, 5);
 		gbc_fileButton.gridx = 2;
 		gbc_fileButton.gridy = 0;
@@ -346,6 +347,7 @@ public class SVN {
 			}
 		});
 		GridBagConstraints gbc_btnExport = new GridBagConstraints();
+		gbc_btnExport.anchor = GridBagConstraints.NORTHWEST;
 		gbc_btnExport.insets = new Insets(0, 0, 5, 5);
 		gbc_btnExport.gridx = 0;
 		gbc_btnExport.gridy = 3;
@@ -495,6 +497,7 @@ public class SVN {
 
 				List<String> versionString = Arrays.asList(entry.getName().split("-"));
 				handler.setVersion(versionString.get(versionString.size() - 1));
+				handler.setArtifact(artifactId);
 				myReader.setContentHandler(handler);
 				myReader.parse(new InputSource(new ByteArrayInputStream(baos.toByteArray())));
 				csv.append(handler.getCSV());
