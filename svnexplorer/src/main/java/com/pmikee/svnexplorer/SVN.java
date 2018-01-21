@@ -23,13 +23,16 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -54,6 +57,7 @@ import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import javax.swing.text.DefaultCaret;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.maven.model.Dependency;
@@ -64,7 +68,6 @@ import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.Invoker;
 import org.apache.maven.shared.invoker.MavenInvocationException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.tmatesoft.svn.core.SVNDirEntry;
 import org.tmatesoft.svn.core.SVNProperties;
@@ -96,6 +99,9 @@ public class SVN {
 	private Preferences prefs;
 	private char[] password;
 	private StringBuilder csv = new StringBuilder();
+	private SVNRepository repository = null;
+	private JButton btnExport;
+	private JComboBox<String> foldersCombo;
 
 	/**
 	 * Launch the application.
@@ -120,6 +126,13 @@ public class SVN {
 	public SVN() {
 		loadProperties();
 		initialize();
+		new Thread(new Runnable() {
+			public void run() {
+				initSVNFolders();
+				foldersCombo.revalidate();
+				foldersCombo.repaint();
+			}
+		}).start();
 
 	}
 
@@ -134,7 +147,7 @@ public class SVN {
 				prefs.put(PREF_NAME, "");
 			}
 		} catch (BackingStoreException e) {
-			logArea.setText(ReflectionToStringBuilder.toString(e));
+			logArea.setText(System.getProperty("line.separator") + " " + ReflectionToStringBuilder.toString(e));
 		}
 
 	}
@@ -162,9 +175,9 @@ public class SVN {
 		frame.getContentPane().add(panel, gbc_panel);
 		GridBagLayout gbl_panel = new GridBagLayout();
 		gbl_panel.columnWidths = new int[] { 150, 200, 0, 200, 0, 30, 0 };
-		gbl_panel.rowHeights = new int[] { 0, 0, 329, 0, 260, 0 };
-		gbl_panel.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
-		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panel.rowHeights = new int[] { 0, 0, 0, 329, 0, 260, 0 };
+		gbl_panel.columnWeights = new double[] { 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panel.setLayout(gbl_panel);
 
 		filePathField = new JTextField();
@@ -288,12 +301,24 @@ public class SVN {
 		gbc_btnNewButton.gridy = 0;
 		panel.add(btnNewButton, gbc_btnNewButton);
 
+		foldersCombo = new JComboBox();
+		GridBagConstraints gbc_foldersCombo = new GridBagConstraints();
+		gbc_foldersCombo.gridwidth = 2;
+		gbc_foldersCombo.insets = new Insets(0, 0, 5, 5);
+		gbc_foldersCombo.fill = GridBagConstraints.HORIZONTAL;
+		gbc_foldersCombo.gridx = 0;
+		gbc_foldersCombo.gridy = 1;
+		panel.add(foldersCombo, gbc_foldersCombo);
+
+		DefaultComboBoxModel model = new DefaultComboBoxModel();
+		foldersCombo.setModel(model);
+
 		simpleMode = new JCheckBox("Egyszerű mód");
 		simpleMode.setSelected(true);
 		GridBagConstraints gbc_simpleMode = new GridBagConstraints();
 		gbc_simpleMode.insets = new Insets(0, 0, 5, 5);
 		gbc_simpleMode.gridx = 0;
-		gbc_simpleMode.gridy = 1;
+		gbc_simpleMode.gridy = 2;
 		panel.add(simpleMode, gbc_simpleMode);
 
 		tableScollPane = new JScrollPane();
@@ -302,7 +327,7 @@ public class SVN {
 		gbc_tableScollPane.fill = GridBagConstraints.BOTH;
 		gbc_tableScollPane.insets = new Insets(0, 0, 5, 5);
 		gbc_tableScollPane.gridx = 0;
-		gbc_tableScollPane.gridy = 2;
+		gbc_tableScollPane.gridy = 3;
 		panel.add(tableScollPane, gbc_tableScollPane);
 
 		dependencyTable = new JTable(new POMTableModel()) {
@@ -339,18 +364,19 @@ public class SVN {
 		sorter.setSortKeys(sortKeys);
 
 		tableScollPane.setViewportView(dependencyTable);
-		
+
 		btnExport = new JButton("Export");
 		btnExport.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				logArea.setText(logArea.getText() + System.getProperty("line.separator") + "verziók csv elkészült: " + (((POMTableModel)dependencyTable.getModel()).createCSV()).getAbsolutePath());
+				logArea.setText(logArea.getText() + System.getProperty("line.separator") + "verziók csv elkészült: "
+						+ ((POMTableModel) dependencyTable.getModel()).createCSV().getAbsolutePath());
 			}
 		});
 		GridBagConstraints gbc_btnExport = new GridBagConstraints();
 		gbc_btnExport.anchor = GridBagConstraints.NORTHWEST;
 		gbc_btnExport.insets = new Insets(0, 0, 5, 5);
 		gbc_btnExport.gridx = 0;
-		gbc_btnExport.gridy = 3;
+		gbc_btnExport.gridy = 4;
 		panel.add(btnExport, gbc_btnExport);
 
 		logScrollPane = new JScrollPane();
@@ -359,7 +385,7 @@ public class SVN {
 		gbc_logScrollPane.gridwidth = 4;
 		gbc_logScrollPane.fill = GridBagConstraints.BOTH;
 		gbc_logScrollPane.gridx = 0;
-		gbc_logScrollPane.gridy = 4;
+		gbc_logScrollPane.gridy = 5;
 		panel.add(logScrollPane, gbc_logScrollPane);
 
 		logArea = new JTextArea();
@@ -368,9 +394,19 @@ public class SVN {
 		logArea.setColumns(50);
 		DefaultCaret caret = (DefaultCaret) logArea.getCaret();
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		logArea.setCaret(caret);
 
 		logScrollPane.setColumnHeaderView(logArea);
 		logScrollPane.setViewportView(logArea);
+
+		foldersCombo.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				process();
+
+			}
+		});
 
 	}
 
@@ -406,7 +442,6 @@ public class SVN {
 			return true;
 		}
 	};
-	private JButton btnExport;
 
 	private void process() {
 		POMTableModel tableModel = (POMTableModel) dependencyTable.getModel();
@@ -414,7 +449,22 @@ public class SVN {
 		if (simpleMode.isSelected()) {
 			MavenXpp3Reader reader = new MavenXpp3Reader();
 			try {
-				Model model = reader.read(new FileReader(new File(filePathField.getText())));
+				Model model = null;
+				if (!StringUtils.isBlank(filePathField.getText())) {
+					model = reader.read(new FileReader(new File(filePathField.getText())));
+				} else if (!StringUtils.isBlank((String) foldersCombo.getSelectedItem())) {
+					try {
+						SVNProperties fileProperties = new SVNProperties();
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						String filename = foldersCombo.getSelectedItem() + "/trunk/pom.xml";
+						repository.getFile(filename, -1, fileProperties, baos);
+
+						model = reader.read(new ByteArrayInputStream(baos.toByteArray()));
+					} catch (Exception e) {
+						logArea.append(
+								System.getProperty("line.separator") + " " + ToStringBuilder.reflectionToString(e));
+					}
+				}
 				for (Dependency dep : model.getDependencies()) {
 					if (dep.getGroupId().equals("com.fusionr.erps") || dep.getGroupId().equals("com.fusionr.erps.ws")) {
 						POMDependency d = new POMDependency(dep.getArtifactId(), dep.getGroupId(), dep.getVersion());
@@ -445,7 +495,7 @@ public class SVN {
 		}
 	}
 
-	private void generateChanges(String artifactId, String startVersion, String version) {
+	private void initSVNFolders() {
 
 		JLabel userNameLabe = new JLabel("Username: ");
 		JTextField userName = new JTextField();
@@ -454,7 +504,7 @@ public class SVN {
 		}
 		JLabel label = new JLabel("Password:");
 		JPasswordField jpf = new JPasswordField();
-		if (password == null || (password.length == 0 && StringUtils.isBlank(userName.getText()))) {
+		if (password == null || password.length == 0 && StringUtils.isBlank(userName.getText())) {
 			int n = JOptionPane.showConfirmDialog(null, new Object[] { userNameLabe, userName, label, jpf },
 					"Password:", JOptionPane.OK_CANCEL_OPTION);
 
@@ -466,20 +516,54 @@ public class SVN {
 		}
 
 		DAVRepositoryFactory.setup();
-		String url = prefs.get("SVN_TAG_ROOT", "") + artifactId + "/tags";
-
-		SVNRepository repository = null;
+		String url = "https://svn/fr/mvn/com.fusionr/";
 
 		try {
+
 			repository = SVNRepositoryFactory.create(SVNURL.parseURIEncoded(url));
 			ISVNAuthenticationManager authManager = SVNWCUtil
 					.createDefaultAuthenticationManager(userName.getText().trim(), password);
 			repository.setAuthenticationManager(authManager);
 
 			Collection<SVNDirEntry> entries = repository.getDir("", -1, null, (Collection<SVNDirEntry>) null);
+
+			foldersCombo.removeAllItems();
+			foldersCombo.addItem(null);
+			List<String> folders = new ArrayList<String>();
 			for (SVNDirEntry entry : entries) {
-				if (startVersion != null
-						&& entry.getName().compareToIgnoreCase((artifactId + "-" + startVersion)) <= 0) {
+				folders.add(entry.getRelativePath());
+			}
+			Collections.sort(folders);
+			for (String folder : folders) {
+				if (folder.contains("webapp")) {
+					foldersCombo.addItem(folder);
+				}
+			}
+		} catch (Exception e) {
+			logArea.append(ToStringBuilder.reflectionToString(e));
+		}
+
+	}
+
+	private void generateChanges(String artifactId, String startVersion, String version) {
+
+		try {
+
+			String url = prefs.get("SVN_TAG_ROOT", "") + artifactId + "/tags";
+			repository = SVNRepositoryFactory.create(SVNURL.parseURIEncoded(url));
+			ISVNAuthenticationManager authManager = SVNWCUtil
+					.createDefaultAuthenticationManager(prefs.get("USERNAME", "").trim(), password);
+			repository.setAuthenticationManager(authManager);
+
+			Collection<SVNDirEntry> entries = repository.getDir("", -1, null, (Collection<SVNDirEntry>) null);
+
+			for (SVNDirEntry entry : entries) {
+				String[] artifactArray = entry.getRelativePath().split("-");
+				String versionNumber = artifactArray[artifactArray.length - 1];
+				if (StringUtils.countMatches(versionNumber, ".") != StringUtils.countMatches(startVersion, ".")) {
+					continue;
+				}
+				if (startVersion != null && entry.getName().compareToIgnoreCase(artifactId + "-" + startVersion) <= 0) {
 					continue;
 				}
 				if (entry.getName().compareTo(artifactId + "-" + version) > 0) {
@@ -504,8 +588,7 @@ public class SVN {
 			}
 
 		} catch (Exception e) {
-			logArea.setText(
-					logArea.getText() + System.getProperty("line.separator") + ReflectionToStringBuilder.toString(e));
+			logArea.append(System.getProperty("line.separator") + " " + ToStringBuilder.reflectionToString(e));
 		}
 
 	}
