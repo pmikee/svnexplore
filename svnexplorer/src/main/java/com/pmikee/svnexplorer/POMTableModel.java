@@ -20,7 +20,8 @@ import org.apache.maven.model.Dependency;
 
 public class POMTableModel extends AbstractTableModel {
 
-	private String[] columnNames = new String[] { "groupId", "artifact", "version" };
+	private String[] columnNames = new String[]
+		{ "groupId", "artifact", "version" };
 	private List<POMDependency> data = new ArrayList<>();
 	private List<POMDependency> oldData = new ArrayList<>();
 	private Set<POMDependency> changedDeps = new HashSet<>();
@@ -54,14 +55,14 @@ public class POMTableModel extends AbstractTableModel {
 			return "";
 		}
 		switch (col) {
-		case 0:
-			return data.get(row).getGroupId();
-		case 1:
-			return data.get(row).getArtifact();
-		case 2:
-			return data.get(row).getVersion();
-		default:
-			return "";
+			case 0:
+				return data.get(row).getGroupId();
+			case 1:
+				return data.get(row).getArtifact();
+			case 2:
+				return data.get(row).getVersion();
+			default:
+				return "";
 		}
 	}
 
@@ -81,30 +82,30 @@ public class POMTableModel extends AbstractTableModel {
 		String val = value.toString();
 
 		switch (col) {
-		case 0:
-			data.get(row).setGroupId(val);
-			changedDeps.add(data.get(row));
-			break;
-		case 1:
-			data.get(row).setArtifact(val);
-			changedDeps.add(data.get(row));
-			break;
-		case 2:
-			data.get(row).setOriginalVersion(data.get(row).getVersion());
-			POMDependency d = data.get(row);
-			d.setOriginalVersion(data.get(row).getVersion());
-			d.setVersion(val);
-			data.set(row, d);
-			changedDeps.add(data.get(row));
-			break;
+			case 0:
+				data.get(row).setGroupId(val);
+				changedDeps.add(data.get(row));
+				break;
+			case 1:
+				data.get(row).setArtifact(val);
+				changedDeps.add(data.get(row));
+				break;
+			case 2:
+				data.get(row).setOriginalVersion(data.get(row).getVersion());
+				POMDependency d = data.get(row);
+				d.setOriginalVersion(data.get(row).getVersion());
+				d.setVersion(val);
+				data.set(row, d);
+				changedDeps.add(data.get(row));
+				break;
 		}
-		fireTableRowsUpdated(0, data.size()-1);
+		fireTableRowsUpdated(0, data.size() - 1);
 	}
 
 	public void emptyTable() {
 		data = new ArrayList<>();
 	}
-	
+
 	public File createCSV() {
 		PrintWriter pw = null;
 		File f = null;
@@ -114,7 +115,7 @@ public class POMTableModel extends AbstractTableModel {
 			f = new File("versions" + dateFormat.format(date) + ".csv");
 
 			pw = new PrintWriter(f);
-			for(POMDependency d : data) {
+			for (POMDependency d : data) {
 				pw.write(d.toCsv());
 			}
 		} catch (FileNotFoundException e1) {
@@ -127,7 +128,7 @@ public class POMTableModel extends AbstractTableModel {
 
 	public void updateRow(Dependency dep) {
 		POMDependency innerDep = new POMDependency(dep.getArtifactId(), dep.getGroupId(), dep.getVersion());
-		if(!artifacts.contains(innerDep.getArtifact()) && innerDep.getGroupId().equals("com.fusionr.erps")) {
+		if (!artifacts.contains(innerDep.getArtifact()) && innerDep.getGroupId().equals("com.fusionr.erps")) {
 			data.add(innerDep);
 			oldData.add(innerDep);
 		}
@@ -152,16 +153,19 @@ public class POMTableModel extends AbstractTableModel {
 	public void setRowColour(int row, Color c) {
 		fireTableRowsUpdated(row, row);
 	}
-	
+
 	public POMDependency getRowValue(int row) {
-		return data.get(row);
+		if (row < data.size()) {
+			return data.get(row);
+		}
+		return null;
 	}
 
 	public Color getRowColour(int row) {
-		if(data.get(row).getOriginalVersion() != null) {
+		if (data.get(row).getOriginalVersion() != null) {
 			System.out.println(ToStringBuilder.reflectionToString(data.get(row)));
 		}
 		return data.get(row).getOriginalVersion() != null ? Color.RED : Color.WHITE;
 	}
-	
+
 }
