@@ -577,10 +577,7 @@ public class SVN {
 			for (SVNDirEntry entry : entries) {
 				String[] artifactArray = entry.getRelativePath().split("-");
 				String versionNumber = artifactArray[artifactArray.length - 1];
-				if (!innentol && entry.getName().equals(artifactId + "-" + startVersion)) {
-					innentol = true;
-				}
-
+				
 				if (innentol && !idaig) {
 					System.out.println(entry.getName());
 					if (StringUtils.countMatches(versionNumber, ".") != StringUtils.countMatches(startVersion, ".")
@@ -607,6 +604,9 @@ public class SVN {
 					myReader.setContentHandler(handler);
 					myReader.parse(new InputSource(new ByteArrayInputStream(baos.toByteArray())));
 					csv.append(handler.getCSV());
+				}
+				if (!innentol && entry.getName().equals(artifactId + "-" + startVersion)) {
+					innentol = true;
 				}
 				if (!idaig && entry.getName().equals(artifactId + "-" + version)) {
 					idaig = true;
