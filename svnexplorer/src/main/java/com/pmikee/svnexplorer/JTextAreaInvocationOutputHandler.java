@@ -9,6 +9,7 @@ import javax.swing.JTextArea;
 import org.apache.maven.shared.invoker.InvocationOutputHandler;
 
 class JTextAreaInvocationOutputHandler implements InvocationOutputHandler {
+	private static final String LINE_SEPARATOR = "line.separator";
 	boolean importantData = false;
 	JTextArea textArea;
 	JTable table;
@@ -28,7 +29,7 @@ class JTextAreaInvocationOutputHandler implements InvocationOutputHandler {
 				d = new POMDependency(dependencies.get(1).trim(), dependencies.get(0).replace("[INFO]", "").trim(),
 						dependencies.get(3).trim());
 			}
-			textArea.setText(textArea.getText() + System.getProperty("line.separator") + line);
+			textArea.setText(textArea.getText() + System.getProperty(LINE_SEPARATOR) + line);
 			textArea.setCaretPosition(textArea.getText().length() - 1);
 			textArea.update(textArea.getGraphics());
 			if (d != null) {
@@ -36,9 +37,9 @@ class JTextAreaInvocationOutputHandler implements InvocationOutputHandler {
 			}
 
 		} catch (Exception e) {
-			textArea.setText(textArea.getText() + System.getProperty("line.separator") + e.toString());
+			textArea.setText(textArea.getText() + System.getProperty(LINE_SEPARATOR) + e.toString());
 			for (StackTraceElement traceElement : e.getStackTrace()) {
-				textArea.setText(textArea.getText() + System.getProperty("line.separator") + traceElement);
+				textArea.setText(textArea.getText() + System.getProperty(LINE_SEPARATOR) + traceElement);
 			}
 		} finally {
 			textArea.setCaretPosition(textArea.getText().length() - 1);
