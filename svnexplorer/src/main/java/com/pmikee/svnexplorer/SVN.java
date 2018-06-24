@@ -384,20 +384,23 @@ public class SVN {
 				JLabel grpIdLabel = new JLabel("groupId: ");
 				JLabel artifactIdLabel = new JLabel("artifactId: ");
 				JLabel versionLabel = new JLabel("version: ");
+				JLabel startVersionLabel = new JLabel("start version: ");
 				JTextField grpIdField = new JTextField();
 				JTextField artifactIdField = new JTextField();
 				JTextField versionField = new JTextField();
+				JTextField startVersionField = new JTextField();
 
 				int n = JOptionPane.showConfirmDialog(null, new Object[] { grpIdLabel, grpIdField, artifactIdLabel,
-						artifactIdField, versionLabel, versionField }, "Új függőség", JOptionPane.OK_CANCEL_OPTION);
+						artifactIdField, startVersionLabel, startVersionField, versionLabel, versionField }, "Új függőség", JOptionPane.OK_CANCEL_OPTION);
 
 				if (n != JOptionPane.OK_OPTION) {
 					return;
 				}
 				POMTableModel tableModel = (POMTableModel) dependencyTable.getModel();
-				tableModel.setRowValue(
-						new POMDependency(artifactIdField.getText(), grpIdField.getText(), versionField.getText()));
-				tableModel.addNewDependency(new POMDependency(artifactIdField.getText(), grpIdField.getText(), versionField.getText()));
+				POMDependency dep = new POMDependency(artifactIdField.getText(), grpIdField.getText(), versionField.getText());
+				dep.setOriginalVersion(startVersionField.getText());
+				tableModel.setRowValue(dep);
+				tableModel.addNewDependency(dep);
 			
 
 		});
