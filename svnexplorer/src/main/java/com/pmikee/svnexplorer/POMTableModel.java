@@ -121,7 +121,7 @@ public class POMTableModel extends AbstractTableModel {
 
 	public void updateRow(Dependency dep) {
 		POMDependency innerDep = new POMDependency(dep.getArtifactId(), dep.getGroupId(), dep.getVersion());
-		if (!artifacts.contains(innerDep.getArtifact()) && innerDep.getGroupId().equals("com.fusionr.erps")) {
+		if (!artifacts.contains(innerDep.getArtifact())) {
 			data.add(innerDep);
 			oldData.add(innerDep);
 		}
@@ -155,6 +155,10 @@ public class POMTableModel extends AbstractTableModel {
 			System.out.println(ToStringBuilder.reflectionToString(data.get(row)));
 		}
 		return data.get(row).getOriginalVersion() != null ? Color.RED : Color.WHITE;
+	}
+	
+	public void addNewDependency(POMDependency d) {
+		setValueAt(d, data.size()-1, 2);
 	}
 
 }
