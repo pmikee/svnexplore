@@ -125,7 +125,7 @@ public class SVN {
 				SVN window = new SVN();
 				window.frame.setVisible(true);
 			} catch (Exception e) {
-				log.error("", e);
+				e.printStackTrace();
 			}
 
 		});
